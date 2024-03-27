@@ -16,7 +16,7 @@ def parse_surface_xml_to_dict(xml_file, output_dic, num):
 
 points_dic = {"ID": [], "x-coord": [], "y-coord": [], "z-coord": []}
 
-parse_surface_xml_to_dict(r"J:\Engineering\GIS\Coordination\2024-02-07 Revit and CAD Files\XML Files\Existing Surface.xml", points_dic, 0)
+parse_surface_xml_to_dict(file-path-here, points_dic, 0)
 
 def parse_surface_xml_to_dict_face(xml_file, output_dic, num):
     tree = ET.parse(xml_file)
@@ -37,7 +37,7 @@ def parse_surface_xml_to_dict_face(xml_file, output_dic, num):
 
 faces_dic = {"ID": [], "n1": [], "n2": [], "n3": [], "vertex 1": [], "vertex 2": [], "vertex 3": []}
 
-parse_surface_xml_to_dict_face(r"J:\Engineering\GIS\Coordination\2024-02-07 Revit and CAD Files\XML Files\Existing Surface.xml", faces_dic, 1)
+parse_surface_xml_to_dict_face(file-path-here, faces_dic, 1)
 
 points_df = pandas.DataFrame(points_dic)
 faces_df = pandas.DataFrame(faces_dic)
@@ -54,4 +54,4 @@ def save_dfs_to_disk(points_df, faces_df, path):
     points_df.to_csv(f"{path}\\points_data.csv", index=False)
     faces_df.to_csv(f"{path}\\faces_data.csv", index=False)
 
-save_dfs_to_disk(points_df, faces_df, r"J:\Engineering\GIS\Coordination\2024-02-07 Revit and CAD Files\XML Files")
+save_dfs_to_disk(points_df, faces_df, file-path-here)

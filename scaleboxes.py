@@ -4,7 +4,7 @@ import math
 # Set the map document
 aprx = arcpy.mp.ArcGISProject("CURRENT")
 # Accessing the layout
-layout = aprx.listLayouts(arcpy.GetParameterAsText(0))[0]  # Assuming there's only one layout named "Acreage"
+layout = aprx.listLayouts(arcpy.GetParameterAsText(0))[0]  # Assuming there's only one layout named "Name"
 # Accessing the map frame within the layout
 map_frame = layout.listElements("MAPFRAME_ELEMENT", "Map Frame")[0]
 
