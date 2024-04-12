@@ -12,3 +12,5 @@
 6. Split CAD- **intended to be used as a script for an ArcGIS toolbox** takes a CAD .dwg file and an output geodatabase directory. Will convert your CAD file into individual layers, organized into thematic categories based on their geometries. NOTE: CAD file results will maintain whatever projection you defined for them, so they should be georeferenced prior to running the tool.
 
 7. tidycensus.R- simple R script for getting started with tidycensus. 
+
+8. BLI_automate- **WORK IN PROGRESS** An attempt to automate a basic Buildable Lands Inventory. Currently works with a parcel file and a study area/city limits polygon file. Is not functional as a script currently. Only works in Oregon due to LiDAR data at the moment, but LiDAR could be made into a parameter in the future. 
