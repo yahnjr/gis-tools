@@ -14,3 +14,7 @@
 7. tidycensus.R- simple R script for getting started with tidycensus. 
 
 8. BLI_automate- **WORK IN PROGRESS** An attempt to automate a basic Buildable Lands Inventory. Currently works with a parcel file and a study area/city limits polygon file. Is not functional as a script currently. Only works in Oregon due to LiDAR data at the moment, but LiDAR could be made into a parameter in the future. 
+
+9. PPGIS_app.html- basic app for accepting comments from the public. Just need to add in a publicly editable point file with attributes "comment" and "topic" and a polygon city limits layer if you need. Don't forget to change the center of focus and zoom level to fit your needs.
+
+10. PPGIS_automod.py- a basic script to check your public comments layer for bad words. It will read comments and send you an alert with how many bad comments need to be reviewed (no message if it is 0) and create an Excel file with the bad comments highlighted in red. 

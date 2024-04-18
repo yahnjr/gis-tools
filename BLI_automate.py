@@ -6,8 +6,8 @@ import arcgis
 # set environments
 arcpy.env.overwriteOutput = True
 arcpy.env.addOutputsToMap = True
-input_parcels = arcpy.GetParameterAsText(0)
-study_area = arcpy.GetParameterAsText(1)
+input_parcels = ***input_parcels
+study_area = ***input_study_area
 # output_path = os.path.join(*input_parcels.split("\\")[:-1])
 # arcpy.env.workspace = output_path
 out_gdb = os.path.dirname(input_parcels)
@@ -19,8 +19,9 @@ temp_gdb = r"C:\Temp\Default.gdb"
 
 arcpy.AddMessage("Workspace is " + out_gdb + ", " + arcpy.env.workspace)
 
-# Prepare Parcel layer
-
+#Prepare Parcel layer
+print("Clipping parcles by study area....")
+arcpy.AddMessage("Clipping parcles by study area....")
 # Select parcels by city limits
 parcel_file = input_parcels.split("\\")[-1] + "_Clip"
 selected_parcels = arcpy.SelectLayerByLocation_management(
@@ -36,11 +37,10 @@ Coordinate_system = describe_area.spatialReference
 # export selected parcels
 export_parcel = arcpy.ExportFeatures_conversion(selected_parcels, parcel_file)
 
-arcpy.AddMessage("Clipped file created.")
-print("Clipped file created.")
+arcpy.AddMessage(f"{parcel_file} created, adding fields to file....")
+print(f"{parcel_file} created, adding fields to file....")
 
-# Add fields to parcel file
-
+#Add fields to parcel file
 
 # For inline variable substitution, parameters passed as a String are evaluated using locals(), globals() and isinstance(). To override, substitute values directly.
 def AddFieldstoParcelFile(input_layer):  # Add Fields to Parcel File
@@ -118,8 +118,8 @@ def AddFieldstoParcelFile(input_layer):  # Add Fields to Parcel File
         ],
     )[0]
 
-    arcpy.AddMessage("ET fields created")
-    print("ET fields created")
+    arcpy.AddMessage("ET fields created, calculating defaults...")
+    print("ET fields created, calculating defaults...")
 
     # Process: Calculate Field (Calculate Field) (management)
     Taxlots_select_clip_explode_2_ = arcpy.management.CalculateField(
@@ -206,45 +206,44 @@ def AddFieldstoParcelFile(input_layer):  # Add Fields to Parcel File
 
 AddFieldstoParcelFile(parcel_file)
 
-arcpy.AddMessage("Envision Tomorrow fields finished.")
-print("ET fields finished. ")
+arcpy.AddMessage("Fields created, splitting multipart parcles...")
+print("Fields created, splitting multipart parcles...")
 
-# Split multipart features and record split
+#Split multipart features and record split
 split_parcels = parcel_file + "_split"
-
 
 def split_multipart(input_layer):
 
     arcpy.management.MultipartToSinglepart(input_layer, split_parcels)
-
+    
     arcpy.management.CalculateGeometryAttributes(
         in_features=split_parcels,
         geometry_property=[["Acres2_3J", "AREA"]],
         area_unit="ACRES_US",
         coordinate_system=Coordinate_system,
     )
-    print("calculated new area")
 
+    print("New acreage calculated, transferring attribtues...")
+    arcpy.AddMessage("New acreage calculated, transferring attribtues...")
+    
     split_expression = "split_calc(!Acres_3J!, !Acres2_3J!)"
 
-    codeblock = """def split_calc(field1, field2):
+    codeblock="""def split_calc(field1, field2):
         if field1 == field2:
             return 0
         else:
             return 1"""
-
-    arcpy.CalculateField_management(
-        split_parcels, "Split", split_expression, "PYTHON3", codeblock
-    )
-
+    
+    arcpy.CalculateField_management(split_parcels, "Split", split_expression, "PYTHON3", codeblock)
+    
     arcpy.management.CalculateField(
         in_table=split_parcels, field="ID2_3J", expression="!OBJECTID!"
     )
-
-
+    
 split_multipart(parcel_file)
 
-print("Parcels split.")
+print("Parcels split, creating slope layer...")
+arcpy.AddMessage("Parcels split, creating slope layer...")
 
 # Create slope layer from DOGAMI data
 
@@ -266,19 +265,18 @@ def DOGAMISlopeclippercent(workspace, study_area):  # DOGAMI Slope clip percent
 
     slope_raster = "slope_raster"
 
-    # To allow overwriting outputs change overwriteOutput option to True.
-
-    # # Check out any necessary licenses.
-    # arcpy.CheckOutExtension("3D")
-    # arcpy.CheckOutExtension("spatial")
+    print("Slope layer added from source, clipping....")
+    arcpy.AddMessage("Slope layer added from source, clipping....")
 
     if arcpy.Exists(r"C:\Temp\slope_rec"):
         arcpy.Delete_management(r"C:\Temp\slope_rec")
 
     # Process: Reclassify (2) (Reclassify) (sa)
     out_raster = os.path.join(temp_path, "slope_rec")
-    arcpy.AddMessage("Beginning Reclassification")
-    print("Beginning Reclassification")
+    
+    arcpy.AddMessage("Beginning reclassification...")
+    print("Beginning reclassification...")
+    
     with arcpy.EnvManager(outputCoordinateSystem=Coordinate_System):
         reclassify_out = arcpy.ddd.Reclassify(
             in_raster=slope_raster,
@@ -287,8 +285,10 @@ def DOGAMISlopeclippercent(workspace, study_area):  # DOGAMI Slope clip percent
             out_raster=out_raster,
             missing_values="DATA",
         )
-    arcpy.AddMessage("Converting to polygons")
-    print("Converting to polygons")
+    arcpy.AddMessage("Reclassification complete, converting to polygons...")
+    print("Reclassification complete, converting to polygons...")
+    
+    
     # Process: Raster to Polygon (Raster to Polygon) (conversion)
     slopes_all = os.path.join(temp_gdb, "slopes_all")
     with arcpy.EnvManager(outputMFlag="Disabled", outputZFlag="Disabled"):
@@ -298,155 +298,138 @@ def DOGAMISlopeclippercent(workspace, study_area):  # DOGAMI Slope clip percent
             simplify="NO_SIMPLIFY",
             create_multipart_features="MULTIPLE_OUTER_PART",
         )
-    print("extracting meaningful slopes")
-    print(slopes_all)
+    print("Extracting meaningful slopes...")
+    arcpy.AddMessage("Extracting meaningful slopes...")
+
     updated_layer, Count = arcpy.SelectLayerByAttribute_management(
         slopes_all, where_clause="gridcode = 10 Or gridcode = 25"
     )
-
+    
     arcpy.CopyFeatures_management("slopes_all_Layer1", "Slopes_BLI")
-
+    
     Slope_BLI = "Slopes_BLI"
 
-    arcpy.AddField_management(
-        in_table=Slope_BLI, field_name="Slopes_3J", field_type="SHORT"
-    )
-    arcpy.CalculateField_management(
-        in_table=Slope_BLI,
-        field="Slopes_3J",
-        expression="!gridcode!",
-        expression_type="PYTHON3",
-    )
+    print("Calculating slope field...")
+    arcpy.AddMessage("Calculating slope field...")
 
+    arcpy.AddField_management(in_table=Slope_BLI, field_name="Slopes_3J", field_type="SHORT")
+    arcpy.CalculateField_management(in_table=Slope_BLI, field="Slopes_3J", expression='!gridcode!', expression_type="PYTHON3")
 
 DOGAMISlopeclippercent(
     arcpy.env.workspace,
     parcel_file,
 )
 
-arcpy.AddMessage("Slope BLI polygon layer created")
-print("Slope Layer created")
+arcpy.AddMessage("Slope BLI polygon layer created, creating flood layer...")
+print("Slope BLI polygon layer created, creating flood layer...")
 
-# Create national flood zone and floodway layer
+#Create national flood zone and floodway layer
 
 flood_layer_url = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Flood_Hazard_Reduced_Set_gdb/FeatureServer/0"
 
-# temp_path = r"C:\Temp\default.gdb"
-# flood_zone = os.path.join(temp_path, "Flood_Zone")
-# floodway = os.path.join(temp_path, "Floodway")
-
-
 def prepare_flood(flood_layer_url):
     arcpy.env.extent = parcel_file
-
+    
     arcpy.MakeFeatureLayer_management(flood_layer_url, "flood_layer")
+    
+    print("Flood layer added from source, clipping...")
+    arcpy.AddMessage("Flood layer added from source, clipping...")
 
     flood_layer_clip = os.path.join(temp_gdb, "flood_layer_clip")
     arcpy.analysis.Clip("flood_layer", parcel_file, flood_layer_clip)
 
+    print("Flood layer clipped, extracting flood zones and floodways....")
+    arcpy.AddMessage("Flood layer clipped, extracting flood zones and floodways....")
+
     updated_layer, Count = arcpy.SelectLayerByAttribute_management(
-        flood_layer_clip,
-        where_clause="ZONE_SUBTY = '0.2 Percent Annual Chance Flood Hazard'",
+        flood_layer_clip, where_clause="ZONE_SUBTY = '0.2 Percent Annual Chance Flood Hazard'"
     )
 
     arcpy.CopyFeatures_management("flood_layer_clip_Layer1", "Flood_Zone")
-    # arcpy.ExportFeatures_conversion(updated_layer, "Flood_Zone")
-    arcpy.AddField_management(
-        in_table="Flood_Zone", field_name="FloodZ_3J", field_type="SHORT"
-    )
-    arcpy.CalculateField_management(
-        in_table="Flood_Zone",
-        field="FloodZ_3J",
-        expression=1,
-        expression_type="PYTHON3",
-    )
-
-    print("Flood_Zone created")
+    #arcpy.ExportFeatures_conversion(updated_layer, "Flood_Zone")
+    arcpy.AddField_management(in_table="Flood_Zone", field_name="FloodZ_3J", field_type="SHORT")
+    arcpy.CalculateField_management(in_table="Flood_Zone", field="FloodZ_3J", expression=1, expression_type="PYTHON3")    
+    
+    print("Flood zones layer created, working on floodways...")
+    arcpy.AddMessage("Flood zones layer created, working on floodways...")
 
     updated_layer1, Count1 = arcpy.SelectLayerByAttribute_management(
         flood_layer_clip, where_clause="ZONE_SUBTY = 'Regulatory Floodway'"
     )
-
+    
+    
     arcpy.ExportFeatures_conversion(updated_layer1, "Floodway")
     arcpy.CopyFeatures_management("flood_layer_clip_Layer2", "Floodway")
+    
+    print("Floodways created, calculating flood fields...")
+    arcpy.AddMessage("Floodways created, calculating flood fields...")
 
-    arcpy.AddField_management(
-        in_table="Floodway", field_name="FloodW_3J", field_type="SHORT"
-    )
-    arcpy.CalculateField_management(
-        in_table="Floodway", field="FloodW_3J", expression=1, expression_type="PYTHON3"
-    )
-
+    arcpy.AddField_management(in_table="Floodway", field_name="FloodW_3J", field_type="SHORT")
+    arcpy.CalculateField_management(in_table="Floodway", field="FloodW_3J", expression=1, expression_type="PYTHON3")  
 
 prepare_flood(flood_layer_url)
 
-print("Flood layers created")
+print("Finished with flood layers, creating national wetlands layer...")
+arcpy.AddMessage("Finished with flood layers, creating national wetlands layer...")
 
-# Create national wetlands layer
+#Create national wetlands layer
 
 wetlands_layer_url = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Wetlands/FeatureServer/0"
 
-
 def prepare_wetlands(wetlands_layer_url):
     arcpy.env.extent = parcel_file
-
+    
     arcpy.MakeFeatureLayer_management(wetlands_layer_url, "national_wetlands")
+    
+    print("Data added successfully from source, clipping...")
+    arcpy.AddMessage("Data added successfully from source, clipping...")
 
     NWI_layer_clip = os.path.join(temp_gdb, "NWI_layer_clip")
     arcpy.analysis.Clip("national_wetlands", parcel_file, NWI_layer_clip)
 
+    print("Clipped, extracting wetlands of interest...")
+    arcpy.AddMessage("Clipped, extracting wetlands of interest...")
+    
     updated_layer, Count = arcpy.SelectLayerByAttribute_management(
-        NWI_layer_clip, where_clause="SYSTEM = 'P'"
-    )
-    print("wetlands selected")
-
+        NWI_layer_clip, where_clause="SYSTEM = 'P'")
+    
     arcpy.CopyFeatures_management("NWI_layer_clip_Layer1", "National_Wetlands")
 
-    #     with arcpy.EnvManager(extent=parcel_file):
-    #         arcpy.ExportFeatures_conversion(updated_layer, "National_Wetlands")
-
-    #     updated_layer, Count = arcpy.SelectLayerByLocation_management(
-    #         in_layer=[wetland_type],
-    #         overlap_type="INTERSECT",
-    #         select_features=parcel_file,)
-
-    arcpy.AddField_management(
-        in_table="National_Wetlands", field_name="Natwet_3J", field_type="SHORT"
-    )
-    arcpy.CalculateField_management(
-        in_table="National_Wetlands",
-        field="Natwet_3J",
-        expression=1,
-        expression_type="PYTHON3",
-    )
-
-    print("National Wetlands Layer created")
-
+    print("Wetlands extracted, calculating fields...")
+    arcpy.AddMessage("Wetlands extracted, calculating fields...")
+    
+    arcpy.AddField_management(in_table="National_Wetlands", field_name="Natwet_3J", field_type="SHORT")
+    arcpy.CalculateField_management(in_table="National_Wetlands", field="Natwet_3J", expression=1, expression_type="PYTHON3")  
+    
+    print("Wetlands layer created, merging constraints into one layer...")
+    arcpy.AddMessage("Wetlands layer created, merging constraints into one layer...")
 
 prepare_wetlands(wetlands_layer_url)
+    
 
-
-# Merge constraints into new "Constraints" layer
-
+#Merge constraints into new "Constraints" layer
 
 def Union(slope, flood, floodway, NWI):  # Union
     arcpy.analysis.Union(
         in_features=[[slope, ""], [flood, ""], [floodway, ""], [NWI, ""]],
-        out_feature_class="Constraints",
+       out_feature_class="Constraints"
     )
-
 
 constraints_layer = "Constraints"
 
-Union("Slopes_BLI", "Flood_Zone", "Floodway", "National_Wetlands")
-
-arcpy.AddMessage("Constraints layer created")
-print("Constraints layer created")
-
-
-arcpy.AddField_management(
-    in_table="Constraints", field_name="Constrainment_3J", field_type="FLOAT"
+Union(
+    "Slopes_BLI",
+    "Flood_Zone",
+    "Floodway",
+    "National_Wetlands"
 )
+
+arcpy.AddMessage("Constraints layer created, calculating constrainment fields...")
+print("Constraints layer created, calculating constrainment fields...")
+
+
+
+arcpy.AddField_management(in_table="Constraints", field_name="Constrainment_3J", field_type="FLOAT")
 
 constraints_layer = "Constraints"
 
@@ -457,14 +440,11 @@ codeblock = """def constrain(field1, field2):
         return 1
     else:
         return 0.5"""
+    
+arcpy.CalculateField_management(in_table=constraints_layer, field="Constrainment_3J", expression=constrain_expression, expression_type="PYTHON3", code_block=codeblock)  
 
-arcpy.CalculateField_management(
-    in_table=constraints_layer,
-    field="Constrainment_3J",
-    expression=constrain_expression,
-    expression_type="PYTHON3",
-    code_block=codeblock,
-)
+print("Constrainment factor calculated, intersecting parcels and constraints...")
+arcpy.AddMessage("Constrainment factor calculated, intersecting parcels and constraints...")
 
 # Intersect constraints and parcels to determine constrained acres, dissolve and create a join table
 
@@ -474,24 +454,22 @@ constrained_intersect = os.path.join(temp_gdb, "constrained_intersect")
 
 arcpy.Intersect_analysis([split_parcels, "Constraints"], constrained_intersect)
 
+print("Intersect finished, transferring constrainment attributes...")
+arcpy.AddMessage("Intersect finished, transferring constrainment attributes...")
+
 # acre_field = split_parcels + "_Cnstr_acres"
 
 arcpy.management.CalculateGeometryAttributes(
-    in_features=constrained_intersect,
-    geometry_property=[["Cnstr_acres", "AREA"]],
-    area_unit="ACRES_US",
-    coordinate_system=Coordinate_system,
-)
+        in_features=constrained_intersect,
+        geometry_property=[["Cnstr_acres", "AREA"]],
+        area_unit="ACRES_US",
+        coordinate_system=Coordinate_system,
+    )
 
-arcpy.CalculateField_management(
-    in_table=constrained_intersect,
-    field="Cnstr_acres",
-    expression="!Cnstr_acres! * !Constrainment_3J!",
-    expression_type="PYTHON3",
-)
+arcpy.CalculateField_management(in_table=constrained_intersect, field="Cnstr_acres", expression="!Cnstr_acres! * !Constrainment_3J!", expression_type="PYTHON3") 
 
-print("Constrained acres calculated.")
-print("Dissolving constraints...")
+print("Constrainment factor recalculated, dissolving constraints...")
+arcpy.AddMessage("Constrainment factor recalculated, dissolving constraints...")
 
 constrained_dissolve = os.path.join(temp_gdb, "constrained_dissolve")
 # id2_field = split_parcels + "_ID2_3J"
@@ -504,10 +482,11 @@ arcpy.management.Dissolve(
     statistics_fields="Cnstr_acres SUM",
     multi_part="MULTI_PART",
     unsplit_lines="DISSOLVE_LINES",
-    concatenation_separator="",
+    concatenation_separator=""
 )
 
 print("Dissolve created, joining data...")
+arcpy.AddMessage("Dissolve created, joining data...")
 
 arcpy.management.AddSpatialJoin(
     target_features=split_parcels,
@@ -518,20 +497,17 @@ arcpy.management.AddSpatialJoin(
     search_radius=None,
     distance_field_name="",
     permanent_join="NO_PERMANENT_FIELDS",
-    match_fields=None,
+    match_fields=None
 )
 
-print("Calculating fields...")
+print("Transferring join fields to parcel file...")
+arcpy.AddMessage("Transferring join fields to parcel file...")
 
-arcpy.management.CalculateFields(
-    split_parcels,
-    "PYTHON3",
-    [
-        ["Cnstr_acres", "!SUM_Cnstr_acres!"],
-        ["BLI_acres", "!Acres2_3J! - !Cnstr_acres!"],
-        ["PV_acres", "!BLI_Acres!/!Acres2_3J!"],
-    ],
-)
+arcpy.management.CalculateFields(split_parcels, "PYTHON3", 
+                                 [["Cnstr_acres", "!SUM_Cnstr_acres!"],
+                                  ["BLI_acres", "!Acres2_3J! - !Cnstr_acres!"],
+                                  ["PV_acres", "!BLI_Acres!/!Acres2_3J!"]
+                                 ])
 
 constrain_percent = "constrain_percent(!PV_acres!, !BLI_acres!)"
 
@@ -540,25 +516,23 @@ codeblock = """def constrain_percent(field1, field2):
         return 0
     else:
         return field2"""
+    
+arcpy.CalculateField_management(in_table=split_parcels, field="BLI_acres", expression=constrain_percent, expression_type="PYTHON3", code_block=codeblock)  
 
-arcpy.CalculateField_management(
-    in_table=split_parcels,
-    field="BLI_acres",
-    expression=constrain_percent,
-    expression_type="PYTHON3",
-    code_block=codeblock,
-)
-
+print("Some parcels disqualified and returned to 0")
+arcpy.AddMessage("Some parcels disqualified and returned to 0")
 
 print("Cleaning up and removing join...")
 
 arcpy.management.RemoveJoin(split_parcels)
 
-print("Constraints calculated")
+print(f"Constraints calculated. Completed file is {split_parcels}")
 
 # arcpy.CalculateField_management(in_table=constrained_intersect, field="Cnstr_acres", expression)
 
-# Clean up unecessary layers
+#Clean up unecessary layers
+
+
 
 walk = arcpy.da.Walk(r"C:\Temp\Default.gdb", datatype="FeatureClass")
 
@@ -567,8 +541,11 @@ featlist = []
 for dirpath, dirnames, filenames in walk:
     for filename in filenames:
         featlist.append(os.path.join(dirpath, filename))
-
-
+        
+        
 for feat in featlist:
     arcpy.Delete_management(feat)
     print(f"Deleted intermediate layer {feat}")
+    arcpy.AddMessage(f"Deleted intermediate layer {feat}")
+
+

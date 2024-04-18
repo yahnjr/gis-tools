@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Add Points to Feature Layer</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    #viewDiv {
+      height: 80vh; /* Set your desired height */
+      width: 100%; /* Adjust width as needed */
+      margin: 0;
+      padding: 0;
+      position: relative; /* Added position relative */
+    }
+
+    .topic-buttons {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column; /* Buttons stacked vertically */
+    }
+
+    .topic-button {
+      margin-bottom: 5px; /* Add spacing between buttons */
+      padding: 5px 10px; /* Add some padding for better look */
+      cursor: pointer;
+      background-color: #eee; /* Default button color */
+      border: 1px solid #ddd; /* Button border */
+    }
+
+    .topic-button.selected-topic {
+      background-color: #ddd; /* Slightly darker for selected button */
+    }
+
+    /* Updated styling for the circles */
+    .esri-geometry-point {
+      outline: none; /* Remove outlines */
+      width: 5px; /* Make circles smaller */
+      height: 5px; /* Make circles smaller */
+    }
+
+    .welcome-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      background-color: white;
+      padding: 10px;
+      border: 1px solid #ddd;
+      z-index: 1; /* Ensure it's above the map */
+      max-width: 300px; /* Make it narrower */
+      height: 200px; /* Make it taller */
+      font-size: 11px;
+    }
+    
+    @media only screen and (min-width: 768px) {
+    .welcome-box {
+      font-size: 16px; /* Larger font size for computer screens */
+    }
+
+    .close-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .info-button {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="viewDiv">
+    <div class="welcome-box">
+      <p>Welcome! Please select a topic from the top right and double-click anywhere on the map to add a comment of your own. Click any other comment to view the contents. Multiple comments are welcome!</p>
+      <span class="close-button" onclick="document.querySelector('.welcome-box').style.display = 'none'">x</span>
+    </div>
+  </div>
+  <div class="topic-buttons">
+    <div class="topic-button" id="housing">🟡 Housing</div>
+    <div class="topic-button" id="infrastructure">🟣 Infrastructure</div>
+    <div class="topic-button" id="transportation">🔵 Transportation</div>
+    <div class="topic-button" id="parks">🟢 Parks & Nature</div>
+    <div class="topic-button" id="employment">🔴 Employment</div>
+  </div>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/FeatureLayer",
+      "esri/Graphic",
+      "esri/symbols/SimpleMarkerSymbol",
+      "esri/renderers/UniqueValueRenderer", // Added UniqueValueRenderer
+      "esri/symbols/SimpleFillSymbol", // Added SimpleFillSymbol
+      "esri/PopupTemplate",
+      "esri/widgets/BasemapToggle",
+      "esri/Basemap"
+    ], function(Map, MapView, FeatureLayer, Graphic, SimpleMarkerSymbol, UniqueValueRenderer, SimpleFillSymbol, PopupTemplate, BasemapToggle, Basemap) {
+      var map = new Map({
+        basemap: "topo-vector"
+      });
+
+      var view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [long, lat],
+        zoom: 13 // Adjust zoom level as needed
+      });
+
+      // Placeholder feature layer URL (replace with your actual layer)
+      var featureLayerUrl = PUBLIC_COMMENT_LAYER;
+
+      // Create feature layer
+      var featureLayer = new FeatureLayer({
+        url: featureLayerUrl,
+        outFields: ["*"],
+        editable: true, // Allow editing
+      });
+
+      // Add feature layer to map
+      map.add(featureLayer);
+
+      // Define the UniqueValueRenderer
+      var renderer = new UniqueValueRenderer({
+        field: "topic", // Attribute to base the renderer on
+        defaultSymbol: new SimpleMarkerSymbol(), // Default symbol if no match
+        uniqueValueInfos: [ // Define unique values and symbols
+          {
+            value: "Housing",
+            symbol: {
+              type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+              size: 10,
+              color: [255, 255, 31], //yellow
+              outline: null
+            }
+          },
+          {
+            value: "Infrastructure",
+            symbol: {
+              type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+              size: 10,
+              color: [141, 66, 185], // purple
+              outline: null
+            }
+          },
+          {
+            value: "Transportation",
+            symbol: {
+              type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+              size: 10,
+              color: [69, 151, 205], //blue
+              outline: null
+            }
+          },
+          {
+            value: "Parks",
+            symbol: {
+              type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+              size: 10,
+              color: [69, 199, 86], // green
+              outline: null
+            }
+          },
+          {
+            value: "Employment",
+            symbol: {
+              type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+              size: 10,
+              color: [193, 66, 104], //red
+              outline: null
+            }
+          }
+        ]
+      });
+
+      // Apply the renderer to the feature layer
+      featureLayer.renderer = renderer;
+
+      // Add the new polygon layer with transparent fill
+      var polygonLayerUrl = CITY_LIMITS_LAYER;
+      var polygonLayer = new FeatureLayer({
+        url: polygonLayerUrl,
+        renderer: {
+          type: "simple",
+          symbol: {
+            type: "simple-fill",
+            color: [0, 0, 255, 0], // Blue fill color with transparency
+            outline: {
+              color: [255, 0, 0, 1], // Red outline with transparency
+              width: 2 // 2 pixel thick border
+            }
+          }
+        }
+      });
+
+      // Add polygon layer to map
+      map.add(polygonLayer);
+
+      // Listen for double-click event
+      view.on("double-click", function(event) {
+        event.stopPropagation();
+        // Create a new point graphic at the clicked location
+        var point = {
+          type: "point",
+          longitude: event.mapPoint.longitude,
+          latitude: event.mapPoint.latitude
+        
+        };
+
+        // Get the selected topic
+        var selectedTopic = document.querySelector(".selected-topic");
+        if (!selectedTopic) {
+          alert("Please select a topic before adding a point.");
+          return;
+        }
+
+        // Create a new graphic with attributes
+        var attributes = {
+          pubcomment: prompt("Enter a short comment for this point:"), // Use "pubcomment" attribute
+          topic: selectedTopic.id.charAt(0).toUpperCase() + selectedTopic.id.slice(1) // Set the topic attribute in title case
+        };
+
+        var newGraphic = new Graphic({
+          geometry: point,
+          attributes: attributes
+        });
+
+        // Save the new point to the feature layer
+        featureLayer.applyEdits({
+          addFeatures: [newGraphic]
+        });
+      });
+
+      // Add event listeners for topic buttons
+      var topicButtons = document.querySelectorAll(".topic-button");
+      topicButtons.forEach(function(button) {
+        button.addEventListener("click", function() {
+          // Highlight the selected topic
+          topicButtons.forEach(function(btn) {
+            btn.classList.remove("selected-topic");
+          });
+          button.classList.add("selected-topic");
+        });
+      });
+
+      // Create a custom popup template
+      var popupTemplate = {
+        title: "{topic}",
+        content: [
+          {
+            type: "text",
+            text: "<b>Comment:</b> {pubcomment}"
+          }
+        ]
+      };
+
+      // Set the popup template for the feature layer
+      featureLayer.popupTemplate = popupTemplate;
+    
+      view.popup.collapseEnabled = false;
+      
+      var toggle = new BasemapToggle({
+        view: view,
+        nextBasemap: "hybrid"  // Use the "satellite" basemap
+      });
+
+      view.ui.add(toggle, "bottom-left");
+});
+    
+  </script>
+</body>
+</html>
