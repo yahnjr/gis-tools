@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import pprint
 import pandas
 
+
 def parse_surface_xml_to_dict(xml_file, output_dic, num):
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -14,9 +15,11 @@ def parse_surface_xml_to_dict(xml_file, output_dic, num):
         output_dic["y-coord"].append(split_coord[1])
         output_dic["z-coord"].append(split_coord[2])
 
+
 points_dic = {"ID": [], "x-coord": [], "y-coord": [], "z-coord": []}
 
-parse_surface_xml_to_dict(file-path-here, points_dic, 0)
+parse_surface_xml_to_dict(file - path - here, points_dic, 0)
+
 
 def parse_surface_xml_to_dict_face(xml_file, output_dic, num):
     tree = ET.parse(xml_file)
@@ -35,9 +38,18 @@ def parse_surface_xml_to_dict_face(xml_file, output_dic, num):
         output_dic["vertex 2"].append(split_coord[1])
         output_dic["vertex 3"].append(split_coord[2])
 
-faces_dic = {"ID": [], "n1": [], "n2": [], "n3": [], "vertex 1": [], "vertex 2": [], "vertex 3": []}
 
-parse_surface_xml_to_dict_face(file-path-here, faces_dic, 1)
+faces_dic = {
+    "ID": [],
+    "n1": [],
+    "n2": [],
+    "n3": [],
+    "vertex 1": [],
+    "vertex 2": [],
+    "vertex 3": [],
+}
+
+parse_surface_xml_to_dict_face(file - path - here, faces_dic, 1)
 
 points_df = pandas.DataFrame(points_dic)
 faces_df = pandas.DataFrame(faces_dic)
@@ -50,8 +62,10 @@ print(faces_df)
 pprint.pprint(points_dic)
 pprint.pprint(faces_dic)
 
+
 def save_dfs_to_disk(points_df, faces_df, path):
     points_df.to_csv(f"{path}\\points_data.csv", index=False)
     faces_df.to_csv(f"{path}\\faces_data.csv", index=False)
 
-save_dfs_to_disk(points_df, faces_df, file-path-here)
+
+save_dfs_to_disk(points_df, faces_df, file - path - here)
