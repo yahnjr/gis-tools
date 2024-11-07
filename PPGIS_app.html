@@ -59,6 +59,7 @@
     .welcome-box {
       font-size: 16px; /* Larger font size for computer screens */
     }
+    }
 
     .close-button {
       position: absolute;
@@ -181,10 +182,9 @@
         ]
       });
 
-      // Apply the renderer to the feature layer
       featureLayer.renderer = renderer;
 
-      // Add the new polygon layer with transparent fill
+      // Add city limits layer with transparent fill
       var polygonLayerUrl = CITY_LIMITS_LAYER;
       var polygonLayer = new FeatureLayer({
         url: polygonLayerUrl,

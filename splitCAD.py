@@ -1,7 +1,6 @@
 import arcpy
 import os
 
-# Set your workspace and input feature layer
 workspace = arcpy.GetParameterAsText(0)
 arcpy.env.workspace = workspace
 arcpy.env.overwriteOutput = True
@@ -13,7 +12,7 @@ cad_split = input_cad.split("\\")
 cad_name = cad_split[-1].split(".")[0]
 cad_nospace = cad_name.replace(" ", "")
 cad_nodash = cad_nospace.replace("-", "_")
-cad_gdb = "a" + cad_nodash + "_CADGDB"  # output: 'SWEGLE_OAPlan_CADGDB'
+cad_gdb = "a" + cad_nodash + "_CADGDB"
 cad_fc = cad_nodash + "_CAD_fc"
 
 arcpy.conversion.CADToGeodatabase(input_cad, workspace, cad_gdb, 1000)
@@ -40,20 +39,15 @@ for CAD in CAD_classes:
 
     # Create a new layer for each unique layer/type
     for types in unique_types:
-        # Define the query expression to select features with the current layer
         query_expression = f"Layer = '{types}'"
 
         # Create a new layer with the selected features
         output_layer = f"{types}_{CAD}"
         arcpy.MakeFeatureLayer_management(CAD, output_layer, query_expression)
-
-        # Save the layer to a new feature class (optional)
         output_path = workspace + "\\" + cad_nodash + "_" + CAD
         final_out = arcpy.FeatureClassToGeodatabase_conversion(
             output_layer, output_path
         )
-
-        # Define projection to match original
         arcpy.management.DefineProjection(final_out, CAD_sr)
 
     print(f"{CAD} layers created successfully!")
